@@ -1,0 +1,1575 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Evals Decision Dashboard - Day 22 VinAI Lab</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        :root {
+            --bg-color: #0b0c14;
+            --card-bg: rgba(22, 25, 43, 0.7);
+            --card-border: rgba(99, 102, 241, 0.15);
+            --primary: #6366f1;
+            --primary-glow: rgba(99, 102, 241, 0.4);
+            --secondary: #ec4899;
+            --accent: #14b8a6;
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+            --sidebar-width: 280px;
+            --code-bg: #1e1e2f;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Outfit', sans-serif;
+            scroll-behavior: smooth;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            min-height: 100vh;
+            overflow-x: hidden;
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(99, 102, 241, 0.08) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(236, 72, 153, 0.08) 0%, transparent 40%);
+            background-attachment: fixed;
+        }
+
+        /* Layout Structure */
+        .app-container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        aside {
+            width: var(--sidebar-width);
+            background: rgba(13, 15, 28, 0.95);
+            backdrop-filter: blur(10px);
+            border-right: 1px solid var(--card-border);
+            padding: 2rem 1.5rem;
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            height: 100vh;
+            z-index: 100;
+        }
+
+        .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 3rem;
+        }
+
+        .logo-icon {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 15px var(--primary-glow);
+        }
+
+        .logo-icon i {
+            color: #fff;
+            font-size: 1.25rem;
+        }
+
+        .logo-text {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.25rem;
+            font-weight: 700;
+            background: linear-gradient(to right, #fff, #a5b4fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .nav-menu {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .nav-item {
+            padding: 0.85rem 1rem;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            color: var(--text-muted);
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            border: 1px solid transparent;
+        }
+
+        .nav-item:hover, .nav-item.active {
+            color: #fff;
+            background: rgba(99, 102, 241, 0.1);
+            border-color: rgba(99, 102, 241, 0.2);
+        }
+
+        .nav-item.active {
+            background: linear-gradient(90deg, rgba(99, 102, 241, 0.15), transparent);
+            border-left: 3px solid var(--primary);
+        }
+
+        .nav-item i {
+            font-size: 1.15rem;
+            width: 20px;
+            text-align: center;
+            transition: transform 0.3s;
+        }
+
+        .nav-item:hover i {
+            transform: scale(1.1);
+        }
+
+        /* Main Content */
+        main {
+            margin-left: var(--sidebar-width);
+            flex: 1;
+            padding: 2.5rem 3rem;
+            max-width: 1400px;
+            width: calc(100% - var(--sidebar-width));
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 3rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding-bottom: 1.5rem;
+        }
+
+        .header-title h1 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 2.25rem;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            margin-bottom: 0.25rem;
+        }
+
+        .header-title p {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+        }
+
+        .header-badge {
+            background: rgba(20, 184, 166, 0.1);
+            border: 1px solid rgba(20, 184, 166, 0.2);
+            color: var(--accent);
+            padding: 0.5rem 1rem;
+            border-radius: 30px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* Overview Page Cards */
+        .overview-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 3rem;
+        }
+
+        .stat-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 1.75rem;
+            backdrop-filter: blur(10px);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(99, 102, 241, 0.3);
+            box-shadow: 0 10px 30px rgba(99, 102, 241, 0.05);
+        }
+
+        .stat-card:hover::before {
+            opacity: 1;
+        }
+
+        .stat-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            font-weight: 500;
+            margin-bottom: 1rem;
+        }
+
+        .stat-card-header i {
+            font-size: 1.25rem;
+            color: var(--primary);
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            font-family: 'Space Grotesk', sans-serif;
+        }
+
+        .stat-desc {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        /* Section Container */
+        .dashboard-section {
+            display: none;
+            animation: fadeIn 0.5s ease forwards;
+        }
+
+        .dashboard-section.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Grid structures for content */
+        .content-layout {
+            display: grid;
+            grid-template-columns: 3fr 2fr;
+            gap: 2rem;
+            margin-bottom: 2.5rem;
+        }
+
+        @media (max-width: 1100px) {
+            .content-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Cards */
+        .panel {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 2rem;
+            backdrop-filter: blur(10px);
+            margin-bottom: 2rem;
+        }
+
+        .panel-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.35rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            color: #fff;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding-bottom: 0.75rem;
+        }
+
+        .panel-title i {
+            color: var(--primary);
+        }
+
+        .panel p {
+            line-height: 1.6;
+            margin-bottom: 1rem;
+            color: #d1d5db;
+        }
+
+        /* Table styles */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        th, td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        th {
+            font-weight: 600;
+            color: #fff;
+            background: rgba(99, 102, 241, 0.05);
+        }
+
+        td {
+            color: #d1d5db;
+            font-size: 0.925rem;
+        }
+
+        /* Badges */
+        .badge {
+            padding: 0.25rem 0.6rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            display: inline-block;
+        }
+
+        .badge-success { background: rgba(20, 184, 166, 0.15); color: var(--accent); border: 1px solid rgba(20, 184, 166, 0.3); }
+        .badge-primary { background: rgba(99, 102, 241, 0.15); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.3); }
+        .badge-secondary { background: rgba(236, 72, 153, 0.15); color: #f472b6; border: 1px solid rgba(236, 72, 153, 0.3); }
+        .badge-warning { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
+
+        /* Code Viewer */
+        .code-header {
+            background: #141521;
+            padding: 0.5rem 1rem;
+            border-top-left-radius: 10px;
+            border-top-right-radius: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .code-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .code-dots {
+            display: flex;
+            gap: 4px;
+        }
+
+        .code-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .dot-red { background: #ef4444; }
+        .dot-yellow { background: #f59e0b; }
+        .dot-green { background: #10b981; }
+
+        .code-viewer {
+            background: var(--code-bg);
+            border-bottom-left-radius: 10px;
+            border-bottom-right-radius: 10px;
+            padding: 1.25rem;
+            overflow-x: auto;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.85rem;
+            color: #e2e8f0;
+            line-height: 1.5;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-top: none;
+        }
+
+        /* ASCII mockup terminal */
+        .terminal-window {
+            background: #0d0e15;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.5);
+            margin: 1.5rem 0;
+        }
+
+        .terminal-header {
+            background: #1c1d2a;
+            padding: 0.75rem 1.25rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .terminal-content {
+            padding: 1.5rem;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.825rem;
+            color: #38bdf8;
+            white-space: pre;
+            overflow-x: auto;
+            line-height: 1.4;
+            background: #07080d;
+        }
+
+        /* Simulator / Calculator */
+        .calculator-panel {
+            background: linear-gradient(135deg, rgba(22, 25, 43, 0.9), rgba(13, 15, 28, 0.9));
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            box-shadow: 0 8px 32px rgba(99, 102, 241, 0.05);
+        }
+
+        .slider-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .slider-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+        }
+
+        .slider-val {
+            color: var(--primary);
+            font-weight: 700;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--primary);
+            cursor: pointer;
+            box-shadow: 0 0 10px var(--primary-glow);
+            transition: transform 0.1s;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        .calc-result-box {
+            background: rgba(99, 102, 241, 0.08);
+            border: 1px dashed rgba(99, 102, 241, 0.3);
+            border-radius: 12px;
+            padding: 1.25rem;
+            margin-top: 1.5rem;
+        }
+
+        .calc-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.75rem;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        .calc-row.total {
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            padding-top: 0.75rem;
+            margin-bottom: 0;
+            font-size: 1.1rem;
+            color: #fff;
+            font-weight: 700;
+        }
+
+        .calc-val {
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 600;
+            color: var(--accent);
+        }
+
+        /* FAQ/Accordion style */
+        .accordion-item {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 1rem 0;
+        }
+
+        .accordion-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 1rem;
+            color: #fff;
+            transition: color 0.3s;
+        }
+
+        .accordion-header:hover {
+            color: var(--primary);
+        }
+
+        .accordion-content {
+            display: none;
+            padding-top: 0.75rem;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+
+        .accordion-item.active .accordion-content {
+            display: block;
+        }
+
+        .accordion-icon {
+            transition: transform 0.3s;
+        }
+
+        .accordion-item.active .accordion-icon {
+            transform: rotate(180deg);
+        }
+
+        /* Global style settings */
+        .alert {
+            padding: 1rem 1.25rem;
+            border-radius: 10px;
+            margin-bottom: 1.5rem;
+            display: flex;
+            gap: 0.75rem;
+            align-items: flex-start;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        .alert-important {
+            background: rgba(99, 102, 241, 0.1);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            color: #a5b4fc;
+        }
+
+        .alert-important i {
+            color: var(--primary);
+            margin-top: 2px;
+        }
+
+        .alert-warning {
+            background: rgba(245, 158, 11, 0.1);
+            border: 1px solid rgba(245, 158, 11, 0.2);
+            color: #fde68a;
+        }
+
+        .alert-warning i {
+            color: #f59e0b;
+            margin-top: 2px;
+        }
+
+        .grid-2col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+
+        @media (max-width: 768px) {
+            .grid-2col {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside>
+            <div class="logo-area">
+                <div class="logo-icon">
+                    <i class="fa-solid fa-gauge-high"></i>
+                </div>
+                <div class="logo-text">AI Eval Decision</div>
+            </div>
+            
+            <ul class="nav-menu">
+                <li class="nav-item active" onclick="switchSection('overview')">
+                    <i class="fa-solid fa-chart-pie"></i> Tổng quan
+                </li>
+                <li class="nav-item" onclick="switchSection('case1')">
+                    <i class="fa-solid fa-ticket"></i> Case 1: Triage Ticket
+                </li>
+                <li class="nav-item" onclick="switchSection('case2')">
+                    <i class="fa-solid fa-comments"></i> Case 2: Sales Copilot
+                </li>
+                <li class="nav-item" onclick="switchSection('case3')">
+                    <i class="fa-solid fa-hospital"></i> Case 3: Medical Routing
+                </li>
+            </ul>
+        </aside>
+
+        <!-- Main Workspace -->
+        <main>
+            <!-- Header Section -->
+            <header>
+                <div class="header-title">
+                    <h1 id="page-title">Tổng quan dự án</h1>
+                    <p id="page-subtitle">Ngày 22 - Eval Decision Workbook PM Report</p>
+                </div>
+                <div class="header-badge">
+                    <i class="fa-solid fa-circle-check"></i> Đã nộp bài tập (Main branch)
+                </div>
+            </header>
+
+            <!-- SECTION: OVERVIEW -->
+            <section id="overview" class="dashboard-section active">
+                <div class="overview-grid">
+                    <div class="stat-card">
+                        <div class="stat-card-header">
+                            <span>TỔNG NGÂN SÁCH ĐỀ XUẤT</span>
+                            <i class="fa-solid fa-wallet"></i>
+                        </div>
+                        <div class="stat-value" id="global-total-budget">$3,320</div>
+                        <div class="stat-desc">Dành cho 3 dự án thử nghiệm pilot sơ bộ</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-card-header">
+                            <span>TỔNG THỜI GIAN TRIỂN KHAI</span>
+                            <i class="fa-solid fa-calendar-days"></i>
+                        </div>
+                        <div class="stat-value">2 Tuần</div>
+                        <div class="stat-desc">Chạy song song và nghiệm thu chất lượng</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-card-header">
+                            <span>SỐ LƯỢNG CASE THỬ NGHIỆM</span>
+                            <i class="fa-solid fa-database"></i>
+                        </div>
+                        <div class="stat-value">280 Cases</div>
+                        <div class="stat-desc">Bộ Golden và Edge cases chất lượng cao</div>
+                    </div>
+                </div>
+
+                <div class="content-layout">
+                    <div>
+                        <div class="panel">
+                            <h2 class="panel-title"><i class="fa-solid fa-bullseye"></i> Mục tiêu Báo cáo</h2>
+                            <p>Bản báo cáo này hệ thống hóa các đề xuất thiết kế quy trình đánh giá ứng dụng AI (AI Application Evals), xác định các rủi ro vận hành then chốt, đề xuất hợp đồng đầu ra (output contract) tối thiểu, ma trận quyết định nguồn chấm (Code, LLM, Human, Expert), cũng như kế hoạch chạy thử pilot ước tính chi phí thực tế cho 3 bài toán lớn:</p>
+                            <table style="margin-top: 1.5rem;">
+                                <thead>
+                                    <tr>
+                                        <th>Case Study</th>
+                                        <th>Bài toán cốt lõi</th>
+                                        <th>Mức Rủi Ro</th>
+                                        <th>Đích đến chính</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><strong>Case 1: Support Ticket Triage</strong></td>
+                                        <td>Phân loại & định tuyến ticket tự động</td>
+                                        <td><span class="badge badge-primary">Trung bình</span></td>
+                                        <td>Internal Inbox & SLA Escalate</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Case 2: Sales Chat Copilot</strong></td>
+                                        <td>Tóm tắt & đề xuất hành động bán hàng</td>
+                                        <td><span class="badge badge-warning">Cao (Bảo mật)</span></td>
+                                        <td>CRM, Tránh mutate sai DB</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Case 3: Medical Routing Copilot</strong></td>
+                                        <td>Tóm tắt & phân luồng cuộc gọi cấp cứu</td>
+                                        <td><span class="badge badge-secondary">Cực kỳ Cao</span></td>
+                                        <td>An toàn sinh mạng, ESI Protocol</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="panel">
+                            <h2 class="panel-title"><i class="fa-solid fa-network-wired"></i> Phân bổ ngân sách đề xuất ban đầu</h2>
+                            <div style="height: 300px; position: relative; margin-top: 1rem;">
+                                <canvas id="budgetChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="panel calculator-panel">
+                            <h2 class="panel-title"><i class="fa-solid fa-sliders"></i> Tóm lược Budget Tổng</h2>
+                            <p style="font-size: 0.9rem; margin-bottom: 1.5rem;">Ước tính chi phí tích lũy khi điều hành đồng thời cả 3 dự án thử nghiệm.</p>
+                            
+                            <div class="slider-group">
+                                <div class="slider-header">
+                                    <span>Tỉ giá nhân sự trung bình / giờ</span>
+                                    <span class="slider-val" id="rate-val">$20</span>
+                                </div>
+                                <input type="range" id="input-rate" min="10" max="60" value="20" oninput="updateGlobalCosts()">
+                            </div>
+
+                            <div class="slider-group">
+                                <div class="slider-header">
+                                    <span>Giá giờ công Bác sĩ (Case 3)</span>
+                                    <span class="slider-val" id="expert-rate-val">$100</span>
+                                </div>
+                                <input type="range" id="input-expert-rate" min="50" max="150" value="100" oninput="updateGlobalCosts()">
+                            </div>
+
+                            <div class="calc-result-box">
+                                <div class="calc-row">
+                                    <span>Chi phí API Keys (Gemini thô)</span>
+                                    <span class="calc-val" id="global-api-cost">$43.00</span>
+                                </div>
+                                <div class="calc-row">
+                                    <span>Chi phí Nhân sự (PM & Eng)</span>
+                                    <span class="calc-val" id="global-staff-cost">$2,280.00</span>
+                                </div>
+                                <div class="calc-row">
+                                    <span>Chi phí Bác sĩ (Expert)</span>
+                                    <span class="calc-val" id="global-expert-cost">$1,000.00</span>
+                                </div>
+                                <div class="calc-row total">
+                                    <span>Tổng Dự Toán Pilot</span>
+                                    <span class="calc-val" style="color: var(--secondary);" id="global-total-calc">$3,323.00</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="panel">
+                            <h2 class="panel-title"><i class="fa-solid fa-circle-info"></i> Ghi chú PM</h2>
+                            <div class="alert alert-important">
+                                <i class="fa-solid fa-triangle-exclamation"></i>
+                                <div>
+                                    Mọi tính toán chi phí được tính toán trên giá API chính thức của dòng mô hình Google Gemini 1.5 trên Google Cloud.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION: CASE 1 -->
+            <section id="case1" class="dashboard-section">
+                <div class="content-layout">
+                    <div>
+                        <div class="panel">
+                            <h2 class="panel-title"><i class="fa-solid fa-circle-question"></i> Khái quát Tác vụ & Chất lượng</h2>
+                            <p><strong>Unit of Work:</strong> Một ticket hỗ trợ mới đi vào hệ thống &rarr; AI phân loại, đánh giá độ khẩn cấp, xác định nhu cầu có cần người thật xử lý hay không (`requires_human`), đề xuất team phụ trách (`route_to`) và tóm tắt lý do ngắn gọn.</p>
+                            <p><strong>Quality Question:</strong> AI có phân loại đúng loại yêu cầu, xác định chính xác mức độ khẩn cấp và kích hoạt cờ escalation cho khách hàng Enterprise gặp sự cố nghiêm trọng, để tránh ticket đi sai hàng đợi hoặc bị trễ xử lý?</p>
+                        </div>
+
+                        <div class="panel">
+                            <h2 class="panel-title"><i class="fa-solid fa-table-list"></i> Ma trận quyết định nguồn chấm (Eval Decision Map)</h2>
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Thành phần cần chấm</th>
+                                        <th>Code</th>
+                                        <th>LLM</th>
+                                        <th>Human</th>
+                                        <th>Lý do thiết kế</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><strong>Schema & Enum</strong></td>
+                                        <td><span class="badge badge-success">Yes</span></td>
+                                        <td>No</td>
+                                        <td>No</td>
+                                        <td>Deterministic validation, nhanh, rẻ, chính xác 100%.</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Rule: Enterprise + High &rarr; Escalation</strong></td>
+                                        <td><span class="badge badge-success">Yes</span></td>
+                                        <td>No</td>
+                                        <td>No</td>
+                                        <td>Quy tắc nghiệp vụ cứng, viết bằng code boolean assert tin cậy nhất.</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Billing ticket không sang Product</strong></td>
+                                        <td><span class="badge badge-success">Yes</span></td>
+                                        <td>No</td>
+                                        <td>No</td>
+                                        <td>Ràng buộc loại trừ định tuyến, lập trình logic để bảo vệ hàng đợi.</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Phân loại Category & Urgency</strong></td>
+                                        <td>No</td>
+                                        <td><span class="badge badge-primary">Yes</span></td>
+                                        <td><span class="badge badge-secondary">Yes</span></td>
+                                        <td>Yêu cầu đọc hiểu ngữ nghĩa phức tạp. LLM chấm theo rubric và Human calibrate.</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Tóm tắt trung thực (Reason Summary)</strong></td>
+                                        <td>No</td>
+                                        <td><span class="badge badge-primary">Yes</span></td>
+                                        <td><span class="badge badge-secondary">Yes</span></td>
+                                        <td>Kiểm tra tránh AI bịa đặt thông tin (hallucination). LLM-as-judge so khớp.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="panel">
+                            <h2 class="panel-title"><i class="fa-solid fa-code"></i> Output Contract tối thiểu</h2>
+                            <div class="code-header">
+                                <div class="code-dots">
+                                    <span class="code-dot dot-red"></span>
+                                    <span class="code-dot dot-yellow"></span>
+                                    <span class="code-dot dot-green"></span>
+                                </div>
+                                <div class="code-title"><i class="fa-solid fa-file-code"></i> ticket_triage_schema.json</div>
+                            </div>
+                            <pre class="code-viewer"><code>{
+  "ticket_id": "T-115",
+  "category": "technical", // technical | billing | product_question | unknown
+  "urgency": "high",       // low | medium | high | critical
+  "route_to": "technical_support", // technical_support | billing_ops | product_team | support_l1 | human_escalation
+  "requires_human": true,
+  "reason_summary": "Lỗi đăng nhập sau reset mật khẩu đang chặn công việc của khách Enterprise.",
+  "confidence": 0.92       // float [0.0 - 1.0]
+}</code></pre>
+                        </div>
+
+                        <div class="panel">
+                            <h2 class="panel-title"><i class="fa-solid fa-shield-halved"></i> Quy tắc Release Gate</h2>
+                            <p>Để code cập nhật được release lên production, hệ thống CI phải tự động xác minh:</p>
+                            <ul>
+                                <li style="margin-left: 1.5rem; margin-bottom: 0.5rem;"><strong>Safety Gate (Bắt buộc pass 100%):</strong> Không lỗi vỡ schema; tỉ lệ vi phạm rule Enterprise = 0%; tỉ lệ route Billing sang Product = 0%.</li>
+                                <li style="margin-left: 1.5rem; margin-bottom: 0.5rem;"><strong>Quality Gate (Yêu cầu >= 95%):</strong> Độ chính xác gán nhãn Category và Urgency (so với golden dataset) >= 95%. Độ trung thực của summary đạt 100% (không có hallucination).</li>
+                                <li style="margin-left: 1.5rem; margin-bottom: 0.5rem;"><strong>Performance Gate:</strong> Latency P95 < 2.5 giây.</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Side panel simulator -->
+                    <div>
+                        <div class="panel calculator-panel">
+                            <h2 class="panel-title"><i class="fa-solid fa-calculator"></i> Simulator Kế Hoạch Pilot</h2>
+                            <div class="slider-group">
+                                <div class="slider-header">
+                                    <span>Số lượng cases trong tập tham chiếu</span>
+                                    <span class="slider-val" id="c1-cases-val">100</span>
+                                </div>
+                                <input type="range" id="c1-cases" min="50" max="200" value="100" oninput="updateCase1Costs()">
+                            </div>
+                            <div class="slider-group">
+                                <div class="slider-header">
+                                    <span>Số lần chạy lặp để tối ưu prompt</span>
+                                    <span class="slider-val" id="c1-runs-val">30</span>
+                                </div>
+                                <input type="range" id="c1-runs" min="10" max="100" value="30" oninput="updateCase1Costs()">
+                            </div>
+
+                            <div class="calc-result-box">
+                                <div class="calc-row">
+                                    <span>Chi phí API Gemini 1.5 Flash (chạy)</span>
+                                    <span class="calc-val" id="c1-api-flash-cost">$0.36</span>
+                                </div>
+                                <div class="calc-row">
+                                    <span>Chi phí API Gemini 1.5 Pro (Judge)</span>
+                                    <span class="calc-val" id="c1-api-pro-cost">$8.63</span>
+                                </div>
+                                <div class="calc-row">
+                                    <span>Thời gian PM (Rubric & edge cases)</span>
+                                    <span class="calc-val">15 giờ</span>
+                                </div>
+                                <div class="calc-row">
+                                    <span>Thời gian Eng & Ops setup</span>
+                                    <span class="calc-val">15 giờ</span>
+                                </div>
+                                <div class="calc-row total">
+                                    <span>Tổng ngân sách dự kiến</span>
+                                    <span class="calc-val" id="c1-total-cost">$609.00</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="panel">
+                            <h2 class="panel-title"><i class="fa-solid fa-list-check"></i> Edge Cases nổi bật</h2>
+                            <div class="accordion-item" onclick="toggleAccordion(this)">
+                                <div class="accordion-header">
+                                    <span>1. Happy path: Reset mật khẩu thường</span>
+                                    <i class="fa-solid fa-chevron-down accordion-icon"></i>
+                                </div>
+                                <div class="accordion-content">
+                                    Bắt lỗi AI phân sai nhóm y/c hoặc đẩy lên hàng chờ gấp không đáng có. Route chuẩn về L1.
+                                </div>
+                            </div>
+                            <div class="accordion-item" onclick="toggleAccordion(this)">
+                                <div class="accordion-header">
+                                    <span>2. Ambiguous: Hỏi cước lẫn lỗi login</span>
+                                    <i class="fa-solid fa-chevron-down accordion-icon"></i>
+                                </div>
+                                <div class="accordion-content">
+                                    Đảm bảo AI gán nhãn trung lập hoặc cảnh báo độ tự tin thấp khi có sự mập mờ, tranh chấp nhãn.
+                                </div>
+                            </div>
+                            <div class="accordion-item" onclick="toggleAccordion(this)">
+                                <div class="accordion-header">
+                                    <span>3. Missing info: "Alo, xem hộ mình cái này"</span>
+                                    <i class="fa-solid fa-chevron-down accordion-icon"></i>
+                                </div>
+                                <div class="accordion-content">
+                                    Ngăn AI tự bịa ra category/urgency (hallucinate). Gán nhãn `unknown`.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION: CASE 2 -->
+            <section id="case2" class="dashboard-section">
+                <div class="content-layout">
+                    <div>
+                        <div class="panel">
+                            <h2 class="panel-title"><i class="fa-solid fa-circle-question"></i> Khái quát Tác vụ & Chất lượng</h2>
+                            <p><strong>Unit of Work:</strong> Một tín hiệu khách nhắn vào &rarr; AI trích xuất các thông tin nhận diện (SĐT, Email, Mã đơn) &rarr; AI đề xuất lệnh tra cứu CRM/OMS &rarr; AI tóm tắt ngữ cảnh cuộc hội thoại và gợi ý bước trả lời tiếp theo (`suggested_action`).</p>
+                            <p><strong>Quality Question:</strong> Copilot có trích xuất chính xác các tín hiệu khách hàng cung cấp và dừng lại/cảnh báo an toàn khi gặp dữ liệu trùng lắp hoặc mâu thuẫn giữa các hệ thống nội bộ, đồng thời không đưa ra các gợi ý vượt quá thẩm quyền của nhân viên sales hay không?</p>
+                        </div>
+
+                        <div class="panel">
+                            <h2 class="panel-title"><i class="fa-solid fa-table-list"></i> Ma trận quyết định nguồn chấm (Eval Decision Map)</h2>
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Thành phần cần chấm</th>
+                                        <th>Code</th>
+                                        <th>LLM</th>
+                                        <th>Human</th>
+                                        <th>Lý do thiết kế</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><strong>Trích xuất định dạng SĐT/Email</strong></td>
+                                        <td><span class="badge badge-success">Yes</span></td>
+                                        <td>No</td>
+                                        <td>No</td>
+                                        <td>Định dạng chuỗi kỹ thuật, Regex hoặc parser xử lý 100% chuẩn xác và miễn phí.</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Bật cờ mâu thuẫn/trùng lắp</strong></td>
+                                        <td><span class="badge badge-success">Yes</span></td>
+                                        <td>No</td>
+                                        <td>No</td>
+                                        <td>Đếm số bản ghi (count) từ database và đối chiếu logic trường thuộc tính bằng code.</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Tính an toàn của phản hồi nháp</strong></td>
+                                        <td>No</td>
+                                        <td><span class="badge badge-primary">Yes</span></td>
+                                        <td><span class="badge badge-secondary">Yes</span></td>
+                                        <td>Đảm bảo không tự ý giảm giá vượt quyền. LLM chấm theo chính sách (rubrics) và Human audit.</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Tính chính xác của tóm tắt chat</strong></td>
+                                        <td>No</td>
+                                        <td><span class="badge badge-primary">Yes</span></td>
+                                        <td><span class="badge badge-secondary">Yes</span></td>
+                                        <td>Đọc hiểu sắc thái, mong muốn thực của khách.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="panel">
+                            <h2 class="panel-title"><i class="fa-solid fa-code"></i> Output Contract tối thiểu</h2>
+                            <div class="code-header">
+                                <div class="code-dots">
+                                    <span class="code-dot dot-red"></span>
+                                    <span class="code-dot dot-yellow"></span>
+                                    <span class="code-dot dot-green"></span>
+                                </div>
+                                <div class="code-title"><i class="fa-solid fa-file-code"></i> copilot_output_contract.json</div>
+                            </div>
+                            <pre class="code-viewer"><code>{
+  "session_id": "sess-994",
+  "extracted_signals": {
+    "phone_numbers": ["0909123456"],
+    "emails": [],
+    "order_ids": ["DH-48291"]
+  },
+  "lookup_status": "success", // success | not_found | multiple_matches | system_conflict
+  "matched_records": [
+    { "type": "customer", "id": "C-481", "name": "Nguyễn Minh Linh" }
+  ],
+  "conversation_summary": "Khách hỏi tình trạng đơn hàng cũ DH-48291.",
+  "suggested_action": "show_order", // show_order | ask_clarification | escalate_cskh | manual_chat
+  "response_draft": "Dạ đơn hàng DH-48291 của mình đã giao thành công rồi ạ. Chị cần hỗ trợ gì thêm không ạ?",
+  "has_warning": false
+}</code></pre>
+                        </div>
+                    </div>
+
+                    <!-- Side panel simulator -->
+                    <div>
+                        <div class="panel calculator-panel">
+                            <h2 class="panel-title"><i class="fa-solid fa-calculator"></i> Simulator Kế Hoạch Pilot</h2>
+                            <div class="slider-group">
+                                <div class="slider-header">
+                                    <span>Số lượng cases trong tập tham chiếu</span>
+                                    <span class="slider-val" id="c2-cases-val">80</span>
+                                </div>
+                                <input type="range" id="c2-cases" min="40" max="150" value="80" oninput="updateCase2Costs()">
+                            </div>
+                            <div class="slider-group">
+                                <div class="slider-header">
+                                    <span>Số lần chạy lặp để tối ưu prompt</span>
+                                    <span class="slider-val" id="c2-runs-val">40</span>
+                                </div>
+                                <input type="range" id="c2-runs" min="10" max="100" value="40" oninput="updateCase2Costs()">
+                            </div>
+
+                            <div class="calc-result-box">
+                                <div class="calc-row">
+                                    <span>Chi phí API Gemini 1.5 Flash (chạy)</span>
+                                    <span class="calc-val" id="c2-api-flash-cost">$0.48</span>
+                                </div>
+                                <div class="calc-row">
+                                    <span>Chi phí API Gemini 1.5 Pro (Judge)</span>
+                                    <span class="calc-val" id="c2-api-pro-cost">$10.00</span>
+                                </div>
+                                <div class="calc-row">
+                                    <span>Thời gian PM & Thiết kế</span>
+                                    <span class="calc-val">12 giờ</span>
+                                </div>
+                                <div class="calc-row">
+                                    <span>Thời gian Sales Ops / CRM Ops</span>
+                                    <span class="calc-val">23 giờ</span>
+                                </div>
+                                <div class="calc-row total">
+                                    <span>Tổng ngân sách dự kiến</span>
+                                    <span class="calc-val" id="c2-total-cost">$711.00</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="panel">
+                            <h2 class="panel-title"><i class="fa-solid fa-list-check"></i> Edge Cases nổi bật</h2>
+                            <div class="accordion-item" onclick="toggleAccordion(this)">
+                                <div class="accordion-header">
+                                    <span>1. Ambiguous lookup: Trùng số điện thoại</span>
+                                    <i class="fa-solid fa-chevron-down accordion-icon"></i>
+                                </div>
+                                <div class="accordion-content">
+                                    SĐT khớp cả tài khoản cá nhân và tài khoản công ty. AI phải báo `multiple_matches` và đề xuất sales hỏi làm rõ thông tin khách.
+                                </div>
+                            </div>
+                            <div class="accordion-item" onclick="toggleAccordion(this)">
+                                <div class="accordion-header">
+                                    <span>2. Conflicting systems: OMS khác biệt CRM</span>
+                                    <i class="fa-solid fa-chevron-down accordion-icon"></i>
+                                </div>
+                                <div class="accordion-content">
+                                    OMS ghi đơn hủy, CRM ghi đơn VIP đang giao. Đảm bảo kích hoạt `system_conflict` để sales trực tiếp can thiệp.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION: CASE 3 -->
+            <section id="case3" class="dashboard-section">
+                <div class="content-layout">
+                    <div>
+                        <div class="panel">
+                            <h2 class="panel-title"><i class="fa-solid fa-circle-question"></i> Khái quát Tác vụ & Chất lượng</h2>
+                            <p><strong>Unit of Work:</strong> Một transcript cuộc gọi thoại đi vào &rarr; AI tóm tắt cuộc gọi (phân định rõ điều bệnh nhân tự kể, dữ kiện tra cứu và suy luận AI) &rarr; AI nhận diện các triệu chứng lâm sàng và từ khóa nguy hiểm (`red_flags_detected`) &rarr; AI đề xuất loại phân luồng (`routing_decision`) và mức khẩn cấp.</p>
+                            <p><strong>Quality Question:</strong> AI có phát hiện đầy đủ các triệu chứng nguy kịch (red flags) kể cả khi diễn đạt gián tiếp, phân biệt rõ ràng giữa nhu cầu hành chính đơn thuần với vấn đề y khoa cần chuyên môn, và phân luồng chính xác về quy trình khẩn cấp mà không tự tiện đưa ra chẩn đoán hay không?</p>
+                        </div>
+
+                        <div class="panel">
+                            <h2 class="panel-title"><i class="fa-solid fa-route"></i> Workflow Phân Luồng Y Khoa (ASCII)</h2>
+                            <div class="terminal-window">
+                                <div class="terminal-header">
+                                    <div class="code-dots">
+                                        <span class="code-dot dot-red"></span>
+                                        <span class="code-dot dot-yellow"></span>
+                                        <span class="code-dot dot-green"></span>
+                                    </div>
+                                    <span style="font-size:0.8rem; color:var(--text-muted);">clinical_workflow.txt</span>
+                                </div>
+                                <div class="terminal-content">[Cuộc gọi thoại bệnh nhân]
+            │
+            ▼
+[Speech-to-Text (Transcript)]
+            │
+            ▼
+[AI Analysis Node] ──(Trích xuất Triệu chứng, Thuốc, Red Flags)
+            │
+            ├───────────────► [Có từ khóa Red Flag hoặc dấu hiệu nguy kịch?]
+            │                             │
+            │                             ├─► CÓ ──► [Kích hoạt Cấp cứu & Bác sĩ Trực]
+            │                             │          (Đồng thời gửi SMS/Alert khẩn)
+            │                             │
+            │                             └─► KHÔNG ──► [Tra cứu Bệnh án / Đơn thuốc cũ]
+            │                                                    │
+            │                                                    ▼
+            │                                   [Đề xuất Phân luồng & Tóm tắt]
+            │                                                    │
+            ▼                                                    ▼
+[CHECKPOINT 1: Human Agent Review] ◄──────────────────────────────┘
+(Tổng đài viên kiểm tra, xác nhận hoặc sửa đổi đề xuất của AI)
+            │
+            ├─► Luồng Hành chính / Giao thuốc ──► [Thực thi Tự động / Hoàn tất]
+            │
+            └─► Luồng Triệu chứng / Y khoa 
+                        │
+                        ▼
+[CHECKPOINT 2: Domain Expert Review] (Bác sĩ / Điều dưỡng trưởng duyệt Clinical Route)
+                        │
+                        ├─► Đồng ý ──► [Chuyển Bác sĩ chuyên khoa / Kế hoạch xử lý]
+                        └─► Từ chối ──► [Điều chỉnh & phản hồi trực tiếp cho Bệnh nhân]</div>
+                            </div>
+                        </div>
+
+                        <div class="panel">
+                            <h2 class="panel-title"><i class="fa-solid fa-desktop"></i> Màn hình duyệt của Bác sĩ trực (Domain Expert UI ASCII)</h2>
+                            <div class="terminal-window">
+                                <div class="terminal-header">
+                                    <div class="code-dots">
+                                        <span class="code-dot dot-red"></span>
+                                        <span class="code-dot dot-yellow"></span>
+                                        <span class="code-dot dot-green"></span>
+                                    </div>
+                                    <span style="font-size:0.8rem; color:var(--text-muted);">doctor_review_board.ascii</span>
+                                </div>
+                                <div class="terminal-content">+--------------------------------------------------------------------------------------------------+
+| MÀN HÌNH DUYỆT LÂM SÀNG CỦA BÁC SĨ (Expert Review Board)                                         |
++--------------------------------------------------------------------------------------------------+
+| Ca duyệt: MC-094                                         Bệnh nhân: Trần Thị Lan (ID: BN-8821)   |
+| Triệu chứng AI bắt được: [ Khó thở ], [ Nổi mẩn ], [ Chóng mặt ]                                 |
+| Đơn thuốc liên quan: Kháng sinh A (Kê 2 ngày trước)                                              |
+|--------------------------------------------------------------------------------------------------|
+| EVIDENCES / TRANSCRIPT GỐC:                                                                      |
+| "...uống thuốc mới từ hôm qua. Hôm nay bà nổi mẩn khắp tay, chóng mặt và hơi khó thở..."         |
+|--------------------------------------------------------------------------------------------------|
+| AI PROPOSAL:                                                                                     |
+| - Phân luồng đề xuất: [ QUY TRÌNH KHẨN CẤP ]        Mức độ khẩn: [ CRITICAL ]                    |
+| - Đích đến: [ Bác sĩ trực cấp cứu ]                                                              |
+|--------------------------------------------------------------------------------------------------|
+| TIÊU CHÍ DUYỆT LÂM SÀNG (Bác sĩ vui lòng tick):                                                  |
+| [ ] 1. Đúng phân loại cấp cứu theo chuẩn ESI (Emergency Severity Index).                         |
+| [ ] 2. Triệu chứng lâm sàng ghi nhận chính xác và đầy đủ so với transcript.                      |
+| [ ] 3. Khuyến nghị chăm sóc tạm thời an toàn, không chứa chỉ định thuốc trái phép.               |
+|--------------------------------------------------------------------------------------------------|
+| QUYẾT ĐỊNH CỦA BÁC SĨ:                                                                           |
+| [ PHÊ DUYỆT ROUTE ]   [SỬA ROUTE: NURSING TRIAGE]   [SỬA ROUTE: ADMIN]   [Ý KIẾN / CHỈ ĐỊNH KHÁC] |
++--------------------------------------------------------------------------------------------------+</div>
+                            </div>
+                        </div>
+
+                        <div class="panel">
+                            <h2 class="panel-title"><i class="fa-solid fa-table-list"></i> Ma trận quyết định nguồn chấm (Eval Decision Map)</h2>
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Thành phần cần chấm</th>
+                                        <th>Code</th>
+                                        <th>LLM</th>
+                                        <th>Human</th>
+                                        <th>Expert</th>
+                                        <th>Lý do thiết kế y khoa</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><strong>Schema & Format</strong></td>
+                                        <td><span class="badge badge-success">Yes</span></td>
+                                        <td>No</td>
+                                        <td>No</td>
+                                        <td>No</td>
+                                        <td>Deterministic validation, chính xác và miễn phí.</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Quét từ khóa Red Flags</strong></td>
+                                        <td><span class="badge badge-success">Yes</span></td>
+                                        <td>No</td>
+                                        <td>No</td>
+                                        <td>No</td>
+                                        <td>Chốt chặn cứng (khó thở, đau ngực), tránh lọt lưới do LLM reasoning.</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Triệu chứng ngầm định</strong></td>
+                                        <td>No</td>
+                                        <td><span class="badge badge-primary">Yes</span></td>
+                                        <td>No</td>
+                                        <td><span class="badge badge-warning">Yes</span></td>
+                                        <td>Đọc hiểu biểu hiện mô tả (lịm đi, méo xệch). Bác sĩ y khoa hiệu chuẩn rubric.</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Chính xác của định tuyến lâm sàng</strong></td>
+                                        <td>No</td>
+                                        <td>No</td>
+                                        <td>No</td>
+                                        <td><span class="badge badge-warning">Yes</span></td>
+                                        <td>**Bắt buộc có Bác sĩ trực**. Liên quan trực tiếp tới sinh mệnh, không giao phó hoàn toàn cho AI.</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Tóm tắt trung thực, cấm chẩn đoán tự ý</strong></td>
+                                        <td>No</td>
+                                        <td><span class="badge badge-primary">Yes</span></td>
+                                        <td>No</td>
+                                        <td><span class="badge badge-warning">Yes</span></td>
+                                        <td>Ngăn AI "bịa" ra bệnh (hallucination). Bác sĩ kiểm định tính an toàn.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Side panel simulator -->
+                    <div>
+                        <div class="panel calculator-panel">
+                            <h2 class="panel-title"><i class="fa-solid fa-calculator"></i> Simulator Kế Hoạch Pilot</h2>
+                            <div class="slider-group">
+                                <div class="slider-header">
+                                    <span>Số lượng cases trong tập tham chiếu</span>
+                                    <span class="slider-val" id="c3-cases-val">100</span>
+                                </div>
+                                <input type="range" id="c3-cases" min="50" max="200" value="100" oninput="updateCase3Costs()">
+                            </div>
+                            <div class="slider-group">
+                                <div class="slider-header">
+                                    <span>Số lần chạy lặp để tối ưu prompt</span>
+                                    <span class="slider-val" id="c3-runs-val">30</span>
+                                </div>
+                                <input type="range" id="c3-runs" min="10" max="100" value="30" oninput="updateCase3Costs()">
+                            </div>
+
+                            <div class="calc-result-box">
+                                <div class="calc-row">
+                                    <span>Chi phí API Gemini 1.5 Pro (Copilot)</span>
+                                    <span class="calc-val" id="c3-api-flash-cost">$10.13</span>
+                                </div>
+                                <div class="calc-row">
+                                    <span>Chi phí API Gemini 1.5 Pro (Judge)</span>
+                                    <span class="calc-val" id="c3-api-pro-cost">$12.00</span>
+                                </div>
+                                <div class="calc-row">
+                                    <span>Thời gian PM & Setup</span>
+                                    <span class="calc-val">40 giờ</span>
+                                </div>
+                                <div class="calc-row">
+                                    <span>Thời gian Điều phối viên tổng đài</span>
+                                    <span class="calc-val">10 giờ</span>
+                                </div>
+                                <div class="calc-row">
+                                    <span>Thời gian Bác sĩ trực (Expert)</span>
+                                    <span class="calc-val">10 giờ</span>
+                                </div>
+                                <div class="calc-row total">
+                                    <span>Tổng ngân sách dự kiến</span>
+                                    <span class="calc-val" id="c3-total-cost">$2000.00</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="panel">
+                            <h2 class="panel-title"><i class="fa-solid fa-list-check"></i> Edge Cases nổi bật</h2>
+                            <div class="accordion-item" onclick="toggleAccordion(this)">
+                                <div class="accordion-header">
+                                    <span>1. Red Flag gián tiếp: Méo mặt, ú ớ</span>
+                                    <i class="fa-solid fa-chevron-down accordion-icon"></i>
+                                </div>
+                                <div class="accordion-content">
+                                    Không chứa từ khóa "khó thở" nhưng là dấu hiệu đột quỵ cấp. AI bắt buộc đẩy vào luồng cấp cứu khẩn.
+                                </div>
+                            </div>
+                            <div class="accordion-item" onclick="toggleAccordion(this)">
+                                <div class="accordion-header">
+                                    <span>2. Mơ hồ: "Đỡ đau đầu nhưng sao mắt mờ"</span>
+                                    <i class="fa-solid fa-chevron-down accordion-icon"></i>
+                                </div>
+                                <div class="accordion-content">
+                                    Ngăn AI bị đánh lừa bởi cụm từ tích cực "đỡ đau đầu" mà bỏ sót biến chứng nguy hiểm "mắt mờ".
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        // Global variables for calculations
+        let globalRate = 20;
+        let expertRate = 100;
+        let chartInstance = null;
+
+        // Page navigation
+        function switchSection(sectionId) {
+            // Update active state in nav
+            document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+
+            // Toggle sections
+            document.querySelectorAll('.dashboard-section').forEach(sec => sec.classList.remove('active'));
+            document.getElementById(sectionId).classList.add('active');
+
+            // Update title
+            const pageTitle = document.getElementById('page-title');
+            const pageSubtitle = document.getElementById('page-subtitle');
+            
+            if(sectionId === 'overview') {
+                pageTitle.innerText = "Tổng quan dự án";
+                pageSubtitle.innerText = "Ngày 22 - Eval Decision Workbook PM Report";
+            } else if(sectionId === 'case1') {
+                pageTitle.innerText = "Case 1: Support Ticket Triage";
+                pageSubtitle.innerText = "Phân loại và định tuyến ticket dịch vụ SaaS tự động";
+            } else if(sectionId === 'case2') {
+                pageTitle.innerText = "Case 2: Sales Chat Copilot";
+                pageSubtitle.innerText = "Trợ lý tóm tắt và lookup thông tin bán hàng";
+            } else if(sectionId === 'case3') {
+                pageTitle.innerText = "Case 3: Medical Routing Copilot";
+                pageSubtitle.innerText = "Phân luồng cuộc gọi y tế và kiểm soát an toàn lâm sàng";
+            }
+        }
+
+        // Accordions
+        function toggleAccordion(element) {
+            element.classList.toggle('active');
+        }
+
+        // Cost Calculators
+        function updateCase1Costs() {
+            const cases = parseInt(document.getElementById('c1-cases').value);
+            const runs = parseInt(document.getElementById('c1-runs').value);
+            document.getElementById('c1-cases-val').innerText = cases;
+            document.getElementById('c1-runs-val').innerText = runs;
+
+            // API calculations (Gemini 1.5 Flash: $0.075/1M input, $0.30/1M output)
+            // Input: 1,000 tokens. Output: 150 tokens.
+            const totalRuns = cases * runs;
+            const flashInputCost = (totalRuns * 1000 * 0.075) / 1000000;
+            const flashOutputCost = (totalRuns * 150 * 0.30) / 1000000;
+            const flashCost = flashInputCost + flashOutputCost;
+            document.getElementById('c1-api-flash-cost').innerText = "$" + flashCost.toFixed(2);
+
+            // LLM Judge (Gemini 1.5 Pro: $1.25/1M input, $5.00/1M output)
+            // Input: 1,500 tokens. Output: 200 tokens.
+            const proInputCost = (totalRuns * 1500 * 1.25) / 1000000;
+            const proOutputCost = (totalRuns * 200 * 5.00) / 1000000;
+            const proCost = proInputCost + proOutputCost;
+            document.getElementById('c1-api-pro-cost').innerText = "$" + proCost.toFixed(2);
+
+            // Human labor (PM: 15 hours, Eng: 10 hours)
+            const staffCost = (15 + 10) * globalRate;
+            const total = flashCost + proCost + staffCost;
+            document.getElementById('c1-total-cost').innerText = "$" + total.toFixed(2);
+
+            updateGlobalCosts();
+        }
+
+        function updateCase2Costs() {
+            const cases = parseInt(document.getElementById('c2-cases').value);
+            const runs = parseInt(document.getElementById('c2-runs').value);
+            document.getElementById('c2-cases-val').innerText = Math.round(cases);
+            document.getElementById('c2-runs-val').innerText = Math.round(runs);
+
+            // API calculations (Gemini 1.5 Flash)
+            // Input: 1,200 tokens, Output: 200 tokens
+            const totalRuns = cases * runs;
+            const flashInputCost = (totalRuns * 1200 * 0.075) / 1000000;
+            const flashOutputCost = (totalRuns * 200 * 0.30) / 1000000;
+            const flashCost = flashInputCost + flashOutputCost;
+            document.getElementById('c2-api-flash-cost').innerText = "$" + flashCost.toFixed(2);
+
+            // LLM Judge (Gemini 1.5 Pro)
+            // Input: 1,500 tokens, Output: 250 tokens
+            const proInputCost = (totalRuns * 1500 * 1.25) / 1000000;
+            const proOutputCost = (totalRuns * 250 * 5.00) / 1000000;
+            const proCost = proInputCost + proOutputCost;
+            document.getElementById('c2-api-pro-cost').innerText = "$" + proCost.toFixed(2);
+
+            // Human labor (PM: 12 hours, CRM Ops: 8 hours, Eng/QA: 15 hours)
+            const staffCost = (12 + 8 + 15) * globalRate;
+            const total = flashCost + proCost + staffCost;
+            document.getElementById('c2-total-cost').innerText = "$" + total.toFixed(2);
+
+            updateGlobalCosts();
+        }
+
+        function updateCase3Costs() {
+            const cases = parseInt(document.getElementById('c3-cases').value);
+            const runs = parseInt(document.getElementById('c3-runs').value);
+            document.getElementById('c3-cases-val').innerText = cases;
+            document.getElementById('c3-runs-val').innerText = runs;
+
+            // Copilot (Gemini 1.5 Pro: $1.25/1M input, $5.00/1M output)
+            // Input: 1,500 tokens, Output: 300 tokens
+            const totalRuns = cases * runs;
+            const copilotInputCost = (totalRuns * 1500 * 1.25) / 1000000;
+            const copilotOutputCost = (totalRuns * 300 * 5.00) / 1000000;
+            const copilotCost = copilotInputCost + copilotOutputCost;
+            document.getElementById('c3-api-flash-cost').innerText = "$" + copilotCost.toFixed(2);
+
+            // LLM Judge (Gemini 1.5 Pro)
+            // Input: 1,800 tokens, Output: 350 tokens
+            const proInputCost = (totalRuns * 1800 * 1.25) / 1000000;
+            const proOutputCost = (totalRuns * 350 * 5.00) / 1000000;
+            const proCost = proInputCost + proOutputCost;
+            document.getElementById('c3-api-pro-cost').innerText = "$" + proCost.toFixed(2);
+
+            // Human labor (PM: 20 hours, Coordinator: 10 hours, Eng: 20 hours)
+            const staffCost = (20 + 10 + 20) * globalRate;
+            const docCost = 10 * expertRate;
+
+            const total = copilotCost + proCost + staffCost + docCost;
+            document.getElementById('c3-total-cost').innerText = "$" + total.toFixed(2);
+
+            updateGlobalCosts();
+        }
+
+        function updateGlobalCosts() {
+            globalRate = parseInt(document.getElementById('input-rate').value);
+            expertRate = parseInt(document.getElementById('input-expert-rate').value);
+            document.getElementById('rate-val').innerText = "$" + globalRate;
+            document.getElementById('expert-rate-val').innerText = "$" + expertRate;
+
+            // Recalculate individual totals to feed into global sums
+            // Case 1
+            const c1Cases = parseInt(document.getElementById('c1-cases').value);
+            const c1Runs = parseInt(document.getElementById('c1-runs').value);
+            const c1TotalRuns = c1Cases * c1Runs;
+            const c1Flash = ((c1TotalRuns * 1000 * 0.075) + (c1TotalRuns * 150 * 0.30)) / 1000000;
+            const c1Pro = ((c1TotalRuns * 1500 * 1.25) + (c1TotalRuns * 200 * 5.00)) / 1000000;
+            const c1Staff = (15 + 10) * globalRate;
+            const c1Total = c1Flash + c1Pro + c1Staff;
+
+            // Case 2
+            const c2Cases = parseInt(document.getElementById('c2-cases').value);
+            const c2Runs = parseInt(document.getElementById('c2-runs').value);
+            const c2TotalRuns = c2Cases * c2Runs;
+            const c2Flash = ((c2TotalRuns * 1200 * 0.075) + (c2TotalRuns * 200 * 0.30)) / 1000000;
+            const c2Pro = ((c2TotalRuns * 1500 * 1.25) + (c2TotalRuns * 250 * 5.00)) / 1000000;
+            const c2Staff = (12 + 8 + 15) * globalRate;
+            const c2Total = c2Flash + c2Pro + c2Staff;
+
+            // Case 3
+            const c3Cases = parseInt(document.getElementById('c3-cases').value);
+            const c3Runs = parseInt(document.getElementById('c3-runs').value);
+            const c3TotalRuns = c3Cases * c3Runs;
+            const c3Flash = ((c3TotalRuns * 1500 * 1.25) + (c3TotalRuns * 300 * 5.00)) / 1000000;
+            const c3Pro = ((c3TotalRuns * 1800 * 1.25) + (c3TotalRuns * 350 * 5.00)) / 1000000;
+            const c3Staff = (20 + 10 + 20) * globalRate;
+            const c3Expert = 10 * expertRate;
+            const c3Total = c3Flash + c3Pro + c3Staff + c3Expert;
+
+            // Update UI widgets in sidebar simulator
+            const apiSum = c1Flash + c1Pro + c2Flash + c2Pro + c3Flash + c3Pro;
+            const staffSum = c1Staff + c2Staff + c3Staff;
+            const expertSum = c3Expert;
+            const grandTotal = apiSum + staffSum + expertSum;
+
+            document.getElementById('global-api-cost').innerText = "$" + apiSum.toFixed(2);
+            document.getElementById('global-staff-cost').innerText = "$" + staffSum.toFixed(2);
+            document.getElementById('global-expert-cost').innerText = "$" + expertSum.toFixed(2);
+            document.getElementById('global-total-calc').innerText = "$" + grandTotal.toFixed(2);
+            document.getElementById('global-total-budget').innerText = "$" + Math.round(grandTotal).toLocaleString();
+
+            // Update Chart
+            updateChart(c1Total, c2Total, c3Total);
+        }
+
+        // Initialize Chart
+        function initChart() {
+            const ctx = document.getElementById('budgetChart').getContext('2d');
+            chartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Case 1: Support Triage', 'Case 2: Sales Copilot', 'Case 3: Medical Routing'],
+                    datasets: [{
+                        label: 'Dự toán ngân sách ($)',
+                        data: [609, 711, 2000],
+                        backgroundColor: [
+                            'rgba(99, 102, 241, 0.6)',
+                            'rgba(236, 72, 153, 0.6)',
+                            'rgba(20, 184, 166, 0.6)'
+                        ],
+                        borderColor: [
+                            '#6366f1',
+                            '#ec4899',
+                            '#14b8a6'
+                        ],
+                        borderWidth: 1.5,
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.05)'
+                            },
+                            ticks: {
+                                color: '#9ca3af'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            },
+                            ticks: {
+                                color: '#9ca3af'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateChart(c1, c2, c3) {
+            if(chartInstance) {
+                chartInstance.data.datasets[0].data = [c1, c2, c3];
+                chartInstance.update();
+            }
+        }
+
+        // Window Load
+        window.addEventListener('DOMContentLoaded', () => {
+            initChart();
+            updateGlobalCosts();
+        });
+    </script>
+</body>
+</html>
