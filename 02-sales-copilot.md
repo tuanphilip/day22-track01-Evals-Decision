@@ -353,15 +353,16 @@ Sau khi đọc bộ test gợi ý v0 ở trên, hãy đề xuất thêm 5 case c
 
 Không cần nộp một bảng coverage riêng. Hãy chọn 5 case đại diện cho các lát cắt khác nhau, ví dụ: match rõ, thiếu tín hiệu, ambiguity, dữ liệu mâu thuẫn, và action safety.
 
-1. Happy path:
-2. Ambiguous lookup:
-3. Missing information:
-4. Conflicting systems:
-5. Regression case:
-
-Với mỗi case, thêm 1 dòng ngắn giải thích:
-
-- case này dùng để bắt failure gì?
+1. Happy path: Khách nhắn: "Tôi muốn đặt thêm 1 hộp sản phẩm X giống đơn hôm trước, số điện thoại của tôi là 0912345678."
+   - case này dùng để bắt failure gì? Kiểm tra khả năng trích xuất chính xác 1 SĐT hợp lệ và liên kết đúng hồ sơ khách hàng.
+2. Ambiguous lookup: Khách nhắn: "Check cho anh đơn hàng số 0909111222." (Số điện thoại này khớp với 2 tài khoản khách hàng trên CRM: một tài khoản cá nhân và một tài khoản công ty).
+   - case này dùng để bắt failure gì? Đảm bảo Copilot không tự chọn bừa 1 hồ sơ, mà phải bật cờ `lookup_status = multiple_matches` và đề xuất nhân viên hỏi làm rõ thông tin khách hàng.
+3. Missing information: Khách nhắn: "Gửi lại cho mình hóa đơn VAT đơn hôm trước với."
+   - case này dùng để bắt failure gì? Đảm bảo AI không tự suy đoán mã đơn hàng hoặc thông tin khách hàng không tồn tại, mà phải nhận diện là thiếu thông tin cần thiết và gợi ý sales hỏi khách.
+4. Conflicting systems: Khách nhắn: "Đơn DH-99123 của tôi tại sao chưa giao?" (Trên OMS đơn hàng hiển thị trạng thái "Đã hủy", nhưng trên CRM khách hàng lại được phân loại là VIP có hỗ trợ đặc biệt).
+   - case này dùng để bắt failure gì? Kiểm tra xem AI có phát hiện sự mâu thuẫn hệ thống để bật cờ cảnh báo và đưa ra gợi ý xử lý khéo léo thay vì máy móc báo "Đơn đã hủy".
+5. Regression case: Khách nhắn: "Số điện thoại của tôi KHÔNG PHẢI là 0988888888, đó là số của chồng tôi. Số của tôi là 0977777777."
+   - case này dùng để bắt failure gì? Đảm bảo AI hiểu ngữ cảnh phủ định, trích xuất đúng số điện thoại của khách hàng (0977...) chứ không phải số của người chồng (0988...).
 
 ---
 
@@ -425,12 +426,8 @@ Gợi ý từ bài hôm trước:
 
 **Trả lời của bạn:**
 
-Hãy viết 2-4 câu, trong đó có cả:
-
-- bạn chọn lát cắt nào,
-- và vì sao đây là đơn vị đủ nhỏ để eval mà vẫn chạm đúng rủi ro vận hành.
-
-> ...
+Tôi lựa chọn lát cắt là: Một tín hiệu khách nhắn vào -> AI trích xuất các thông tin nhận diện (SĐT, Email, Mã đơn) -> AI đề xuất lệnh tra cứu cơ sở dữ liệu -> AI tóm tắt ngữ cảnh cuộc hội thoại và gợi ý bước trả lời tiếp theo (`suggested_action`).
+Đây là đơn vị công việc nhỏ nhất, độc lập và phản ánh đầy đủ chuỗi logic của Copilot. Đánh giá ở lát cắt này giúp kiểm soát toàn bộ chuỗi suy luận của AI từ khâu đọc hiểu đến khâu kiến nghị hành động trước khi nhân viên bán hàng nhìn thấy trên giao diện, từ đó hạn chế tối đa rủi ro thao tác sai dữ liệu hoặc tiết lộ thông tin.
 
 ### 2. Quality Question
 
@@ -446,12 +443,8 @@ Gợi ý:
 
 **Trả lời của bạn:**
 
-Hãy viết 2-4 câu, trong đó có cả:
-
-- câu hỏi chất lượng bạn chọn,
-- và vì sao nếu fail ở đây thì sales có thể mất trust hoặc trả lời sai khách.
-
-> ...
+Copilot có trích xuất chính xác các tín hiệu khách hàng cung cấp và dừng lại/cảnh báo an toàn khi gặp dữ liệu trùng lắp hoặc mâu thuẫn giữa các hệ thống nội bộ, đồng thời không đưa ra các gợi ý vượt quá thẩm quyền của nhân viên sales hay không?
+Nếu AI trả lời sai câu hỏi này, hậu quả vận hành là nhân viên sales có thể gửi nhầm đơn hàng cho người khác, lộ thông tin nhạy cảm của khách VIP, hoặc hứa hẹn chính sách chiết khấu sai quy định gây thiệt hại tài chính và làm mất lòng tin của khách hàng.
 
 ### 3. Output Contract tối thiểu
 
@@ -470,9 +463,15 @@ Mẹo:
 
 **Trả lời của bạn:**
 
-Đừng chỉ liệt kê field. Với mỗi field bạn giữ lại, hãy giải thích ngắn vì sao nó cần cho lookup, summary, ambiguity warning, next step, hoặc eval.
-
-> ...
+Dưới đây là các field tối thiểu trong output contract và lý do:
+- `session_id` (string): Định danh phiên chat để quản lý lịch sử hội thoại.
+- `extracted_signals` (object: `phone_numbers[]`, `emails[]`, `order_ids[]`): Các tín hiệu thô trích xuất từ tin nhắn khách hàng để kiểm tra tính chính xác của bộ trích xuất.
+- `lookup_status` (enum: `success`, `not_found`, `multiple_matches`, `system_conflict`): Trạng thái của kết quả tra cứu hệ thống để quyết định giao diện hiển thị.
+- `matched_records` (array): Danh sách các profile khách hàng hoặc đơn hàng tương ứng tìm được từ cơ sở dữ liệu.
+- `conversation_summary` (string): Bản tóm tắt ngắn gọn cuộc hội thoại hiện tại.
+- `suggested_action` (enum: `show_order`, `ask_clarification`, `escalate_cskh`, `manual_chat`): Gợi ý hành động tối ưu cho nhân viên.
+- `response_draft` (string or null): Mẫu câu trả lời nháp do AI soạn sẵn để nhân viên sales có thể sử dụng nhanh.
+- `has_warning` (boolean): Cờ bật màu đỏ cảnh báo trên UI nếu phát hiện mâu thuẫn hệ thống hoặc dữ liệu nhạy cảm.
 
 ### 4. Eval Decision Map
 
@@ -486,16 +485,11 @@ Mẹo:
 
 | Thành phần cần chấm | Code | LLM | Human | Expert | Lý do |
 | --- | ---: | ---: | ---: | ---: | --- |
-|  |  |  |  |  |  |
-|  |  |  |  |  |  |
-|  |  |  |  |  |  |
-|  |  |  |  |  |  |
-|  |  |  |  |  |  |
-|  |  |  |  |  |  |
-
-Bạn có thể thêm hoặc bớt dòng nếu cần, nhưng không nên biến bảng này thành một danh sách rất dài.
-
-Không chấp nhận bảng chỉ tick `Yes/No`. Cột `Lý do` phải nói rõ vì sao thành phần đó nên giao cho code, LLM, human, hay expert.
+| Trích xuất định dạng SĐT/Email | Yes | No | No | No | Định dạng chuỗi là quy tắc kỹ thuật cứng, code sử dụng Regex hoặc thư viện chuẩn hóa kiểm tra rất tốt, nhanh và rẻ. |
+| Bật cờ mâu thuẫn hoặc trùng lắp | Yes | No | No | No | Chỉ cần đếm số lượng bản ghi trả về từ DB hoặc đối chiếu trạng thái logic (e.g. status mismatch) bằng code. |
+| Tính an toàn của câu trả lời nháp | No | Yes | Yes | No | Đảm bảo AI không tự hứa hẹn hoàn tiền, chiết khấu trái quy định. LLM-as-judge chấm theo bộ policy của công ty, kết hợp Human audit. |
+| Tính chính xác của tóm tắt hội thoại | No | Yes | Yes | No | Phân tích ngữ nghĩa xem tóm tắt có phản ánh đúng ý khách không. Cần LLM-as-judge và Human calibration. |
+| Tính thực tế của gợi ý bước tiếp theo | No | Yes | Yes | No | Đảm bảo gợi ý phù hợp tâm lý khách và tình trạng đơn hàng thực tế. |
 
 ### 5. Kiểm tra tự động bằng code
 
@@ -507,8 +501,14 @@ Không giới hạn số lượng. Hãy coi như bạn đang thiết kế bộ e
 
 Mỗi ý nên viết theo dạng:
 
-- Kiểm tra: [rule]
-  Vì sao nên giao cho code:
+- Kiểm tra: Định dạng tín hiệu trích xuất hợp lệ. SĐT trích xuất phải gồm 10 chữ số, Email phải có kí tự '@' và domain hợp lệ.
+  Vì sao nên giao cho code: Đây là kiểm tra cú pháp và định dạng chuỗi, code thực thi với chi phí bằng 0 và độ chính xác 100%.
+- Kiểm tra: Bắt buộc kích hoạt trạng thái trùng lắp. Nếu số lượng bản ghi khách hàng trả về từ DB cho một SĐT lớn hơn 1, `lookup_status` phải bằng `multiple_matches` và `suggested_action` phải là `ask_clarification`.
+  Vì sao nên giao cho code: Logic dựa trên số lượng (count) là deterministic, code xử lý hoàn hảo và loại bỏ hoàn toàn sự không ổn định của LLM.
+- Kiểm tra: Phát hiện mâu thuẫn trạng thái đơn hàng. Nếu trạng thái đơn hàng trên OMS là "Đã hủy" nhưng CRM ghi nhận "Đang giao", `lookup_status` phải bằng `system_conflict` và `has_warning` phải bằng `true`.
+  Vì sao nên giao cho code: Đây là phép so sánh logic logic trực tiếp giữa các trường thuộc tính dữ liệu từ hai hệ thống.
+- Kiểm tra: Ràng buộc an toàn nháp phản hồi. Trường `response_draft` không được chứa bất kỳ từ khóa cấm liên quan đến sửa đổi dữ liệu trực tiếp (ví dụ: "cập nhật", "đã sửa đổi hệ thống", "đã lưu lại").
+  Vì sao nên giao cho code: Code sử dụng kiểm tra chuỗi (substring check) để làm chốt chặn an toàn tuyệt đối trước khi hiển thị draft cho sales.
 
 ### 6. Tiêu chí chấm bằng LLM
 
@@ -520,8 +520,12 @@ Chỉ giữ những tiêu chí mà cần đọc hiểu hội thoại, tính hữ
 
 Mỗi ý nên viết theo dạng:
 
-- Tiêu chí: [criterion]
-  Vì sao code không bắt tốt:
+- Tiêu chí: **Draft Safety & Policy Compliance** (Dự thảo phản hồi không cam kết vượt quyền hạn của sales như hoàn tiền ngay, tặng mã giảm giá đặc biệt khi chưa được duyệt).
+  Vì sao code không bắt tốt: AI có thể sử dụng nhiều từ ngữ né tránh hoặc diễn đạt gián tiếp để hứa hẹn với khách. Chỉ có LLM mới hiểu được bản chất ngữ nghĩa của câu cam kết.
+- Tiêu chí: **Summary Conciseness & Relevancy** (Bản tóm tắt hội thoại ngắn gọn dưới 30 từ, tập trung vào nhu cầu hiện tại của khách hàng).
+  Vì sao code không bắt tốt: Yêu cầu khả năng chắt lọc ý chính từ một đoạn hội thoại tự do, code thông thường không thể đánh giá độ cô đọng ngữ nghĩa.
+- Tiêu chí: **Next-step Suitability** (Gợi ý bước tiếp theo phù hợp với trạng thái tâm lý khách hàng, không upsell thô thiển khi khách đang phàn nàn).
+  Vì sao code không bắt tốt: Đòi hỏi khả năng phân tích cảm xúc (sentiment analysis) và hiểu ngữ cảnh hội thoại sâu sắc để đánh giá mức độ phù hợp về mặt ứng xử.
 
 ### 7. Human / Expert Review
 
@@ -531,35 +535,41 @@ Mỗi ý nên viết theo dạng:
 
 **Trả lời của bạn:**
 
-Đừng chỉ ghi tên team review. Hãy giải thích vì sao đúng nhóm đó cần xem, và họ đang kiểm tra rủi ro gì.
-
-> ...
+- **Ai cần review**: Trưởng nhóm Sales Operations (Sales Ops Lead).
+- **Review những case nào**: 
+  - Các case AI gợi ý hành động không an toàn hoặc bị LLM-as-judge gắn cờ cảnh báo chất lượng thấp.
+  - Các ca có cờ `system_conflict` hoặc `multiple_matches` để giám sát xem nhân viên sales thực tế xử lý thế nào và có sửa đổi gì hay không.
+  - Audit ngẫu nhiên 5% lịch sử chat có Copilot hỗ trợ để tinh chỉnh rubric chấm điểm.
+- **Có cần domain expert không**: **Không**. Đây là tác vụ hỗ trợ bán hàng thương mại điện tử thông thường, mọi quy trình đều tuân theo Quy trình bán hàng (Sales SOP) và chính sách khách hàng của công ty. Sales Ops Lead là người có đầy đủ thẩm quyền quyết định mà không cần đến sự tham gia của các chuyên gia chuyên môn sâu được cấp chứng chỉ đặc thù của nhà nước.
 
 Nếu chọn **có domain expert**, bạn phải làm thêm 2 phần dưới đây. Nếu **không cần domain expert**, hãy ghi `Không áp dụng` và giải thích 1 câu.
 
 #### 7A. Màn hình cho Domain Expert (ASCII)
 
-Mock một màn hình review cho expert.
-
-Expert cần thấy tối thiểu:
-
-- AI đã match hoặc gợi ý gì,
-- dữ liệu nguồn hoặc bằng chứng nào expert cần nhìn lại,
-- expert có thể duyệt / sửa / chặn hành động ở đâu.
-
-**Trả lời của bạn:**
-
-```text
-...
-```
+Không áp dụng (Vì nghiệp vụ Sales Chat Copilot không đòi hỏi chuyên gia chuyên ngành chuyên sâu thẩm định mà chỉ cần Trưởng nhóm Sales Operations kiểm tra).
 
 #### 7B. Tiêu chí review của Domain Expert
 
-Liệt kê các tiêu chí domain expert sẽ dùng để duyệt case này.
+Không áp dụng.
 
 ### 8. Release Gate
 
 Đề xuất release gate phù hợp cho case này. Nêu rõ điều kiện chặn, ngưỡng chất lượng tối thiểu, và trường hợp cần human review.
+
+**Trả lời của bạn:**
+
+Bộ lọc duyệt phát hành (Release Gate) đối với các cập nhật cho Sales Copilot bao gồm:
+1. **Safety Assertions (Code-based - Yêu cầu pass 100%)**:
+   - Tỷ lệ phát hiện và chuyển trạng thái trùng lắp (khi DB trả về nhiều hồ sơ cho cùng một SĐT) đạt 100%.
+   - Tỷ lệ phát hiện mâu thuẫn dữ liệu hệ thống OMS/CRM đạt 100%.
+   - Không có trường hợp gợi ý tự động sửa đổi DB được thông qua.
+2. **Semantic Quality (LLM Judge - Yêu cầu đạt >= 92%)**:
+   - Trích xuất SĐT/Email chính xác (F1-score) >= 98% trên tập test.
+   - Tóm tắt hội thoại đạt yêu cầu (ngắn gọn, đủ ý) >= 95%.
+   - Draft phản hồi an toàn, không vi phạm chính sách của doanh nghiệp >= 95%.
+3. **Performance & System (Yêu cầu đạt >= 95%)**:
+   - Latency xử lý (tính từ lúc khách gửi tin đến lúc Copilot đề xuất xong) < 1.2 giây.
+Nếu vi phạm bất kỳ tiêu chí Safety nào, bản cập nhật sẽ lập tức bị chặn. Nếu các tiêu chí Quality nằm trong khoảng 88% - 91%, Sales Ops Lead sẽ được yêu cầu review thủ công một tập mẫu 50 cases lỗi trước khi quyết định duyệt phát hành.
 
 ### 9. Kế hoạch chạy thử và dự toán chi phí
 
@@ -598,5 +608,30 @@ Sau phần này, viết thêm 2-4 câu ngắn:
 - bạn dùng giá API thật từ đâu để tính,
 - với quy mô này chi phí tổng rơi vào khoảng nào,
 - và vì sao plan này đủ để chứng minh Copilot có thể pilot được.
+
+**Trả lời của bạn:**
+
+**Chi tiết kế hoạch pilot và dự toán ngân sách:**
+- **Mô hình & Giá API thực tế**:
+  - Mô hình Copilot: **Gemini 1.5 Flash** (Giá: $0.075 / 1M input tokens; $0.30 / 1M output tokens).
+  - Mô hình LLM Judge: **Gemini 1.5 Pro** (Giá: $1.25 / 1M input tokens; $5.00 / 1M output tokens).
+- **Tham số quy mô thử nghiệm**:
+  - Tập test tham chiếu: 80 cases hội thoại thực tế được ẩn danh hóa.
+  - Số lần chạy lặp lại để tinh chỉnh prompt (Iterations): 40 lần.
+  - Tổng số lượt chạy qua mô hình chính và judge: 80 * 40 = 3,200 lượt.
+  - Kích thước trung bình mỗi case: Input 1,200 tokens (bao gồm cả lịch sử chat thô), Output 200 tokens.
+- **Tính toán chi phí**:
+  - *Chi phí API Gemini 1.5 Flash*: 3,200 lượt * ((1,200 * $0.075/1M) + (200 * $0.30/1M)) = 3,200 * ($0.00009 + $0.00006) = $0.48.
+  - *Chi phí API Gemini 1.5 Pro (LLM Judge)*: 3,200 lượt * ((1,500 * $1.25/1M) + (250 * $5.00/1M)) = 3,200 * ($0.001875 + $0.00125) = $10.00.
+  - *Tổng chi phí API*: ~$11 (đã bao gồm dự phòng token phát sinh).
+  - *Chi phí nhân sự (tính trung bình $20/giờ)*:
+    - PM / Thiết kế Eval (Soạn thảo rubric, kịch bản test): 12 giờ = $240.
+    - Kỹ sư vận hành / Kỹ thuật (Mock dữ liệu CRM, lập trình tool chạy test): 15 giờ = $300.
+    - Sales Ops Lead (Dán nhãn mẫu và audit kết quả chạy thử): 8 giờ = $160.
+    - Chuyên gia ngành (Domain Expert): 0 giờ (Không áp dụng).
+  - *Tổng chi phí Pilot*: Chi phí API ($11) + Chi phí nhân sự ($700) = $711.
+  - *Tổng thời gian dự kiến*: 1.5 tuần.
+
+Tôi sử dụng giá API chính thức của Google Gemini từ website của Google Cloud Developer Platform. Với quy mô 80 cases thực tế qua 40 lần chạy lặp lại, tổng chi phí dự án thử nghiệm chỉ khoảng hơn $700 (tương đương 17.5 triệu VND). Chi phí chạy máy API cực kỳ rẻ (khoảng $11), ngân sách chủ yếu đầu tư vào thời gian của kỹ sư để làm sạch dữ liệu mock CRM và xây dựng bộ kiểm thử tự động. Kế hoạch này giúp chứng minh mức độ tin cậy và tính an toàn của Sales Copilot trên tập dữ liệu thực tế trước khi tích hợp trực tiếp vào CRM production đang hoạt động của công ty.
 
 ---
